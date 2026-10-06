@@ -1,0 +1,92 @@
+---
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  TRIVY_VERSION: "0.75.0"
+
+jobs:
+  test:
+    name: Lint and test
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+        env:
+          POSTGRES_USER: matchday
+          POSTGRES_PASSWORD: matchday
+          POSTGRES_DB: matchday_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U matchday" --health-interval 2s --health-retries 30
+    env:
+      MATCHDAY_DATABASE_URL: postgresql+psycopg://matchday:matchday@localhost:5432/matchday_test
+      MATCHDAY_SECRET_KEY: ci-only
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          version: "0.12.23"
+          enable-cache: true
+      - name: Install locked dependencies
+        run: uv sync --locked
+      - name: Lint
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Test against PostgreSQL (schema built from the migrations)
+        run: uv run pytest
+
+  image:
+    name: Build, scan and smoke-test the image
+    needs: test
+    runs-on: ubuntu-24.04
+    env:
+      MATCHDAY_IMAGE: matchday:ci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
+      - name: Build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: ${{ env.MATCHDAY_IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Install Trivy from the release, checksum verified
+        run: |
+          cd "$RUNNER_TEMP"
+          base="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
+          curl -fsSLO "$base/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl -fsSLO "$base/trivy_${TRIVY_VERSION}_checksums.txt"
+          grep " trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz$" "trivy_${TRIVY_VERSION}_checksums.txt" | sha256sum --check
+          tar -xzf "trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" trivy
+          sudo install trivy /usr/local/bin/
+      - name: Fail on fixable HIGH or CRITICAL vulnerabilities
+        run: trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 "$MATCHDAY_IMAGE"
+      - name: Generate SBOM (CycloneDX)
+        run: trivy image --format cyclonedx --output matchday.sbom.json "$MATCHDAY_IMAGE"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: sbom
+          path: matchday.sbom.json
+          retention-days: 30
+      - name: Smoke test the stack from the built image
+        run: |
+          docker compose up --no-build --wait --detach
+          curl -fsS http://localhost:8000/readyz
+          curl -fsS http://localhost:8000/login | grep -q "Zaloguj"
+          test "$(docker compose ps -a --format '{{.Service}}={{.ExitCode}}' sync)" = "sync=0"
+          docker compose logs sync | grep -q '"created": 6'
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs
