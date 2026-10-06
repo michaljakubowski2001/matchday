@@ -1,0 +1,52 @@
+# Local stack: database, one-shot migrations, one-shot fixture sync, web.
+#   docker compose up --build --wait   ->  http://localhost:8000
+name: matchday
+
+x-app: &app
+  image: ${MATCHDAY_IMAGE:-matchday:local}
+  build: .
+  environment:
+    MATCHDAY_DATABASE_URL: postgresql+psycopg://matchday:matchday@db:5432/matchday
+    MATCHDAY_SECRET_KEY: ${MATCHDAY_SECRET_KEY:-local-dev-only}
+    MATCHDAY_PROVIDER: ${MATCHDAY_PROVIDER:-fake}
+    MATCHDAY_FOOTBALL_DATA_TOKEN: ${MATCHDAY_FOOTBALL_DATA_TOKEN:-}
+
+services:
+  db:
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    environment:
+      POSTGRES_USER: matchday
+      POSTGRES_PASSWORD: matchday
+      POSTGRES_DB: matchday
+    ports: ["127.0.0.1:5432:5432"]  # for running the tests from the host
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "matchday"]
+      interval: 2s
+      retries: 30
+    volumes:
+      - db:/var/lib/postgresql/data
+
+  migrate:
+    <<: *app
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db: {condition: service_healthy}
+
+  sync:
+    <<: *app
+    command: ["matchday", "sync"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+
+  web:
+    <<: *app
+    ports: ["127.0.0.1:8000:8000"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz')"]
+      interval: 3s
+      retries: 20
+
+volumes:
+  db:
