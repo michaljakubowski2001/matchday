@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ "Rejestracja" if mode == "register" else "Logowanie" }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ "Załóż konto" if mode == "register" else "Zaloguj się" }}</h1>
+  <form method="post" action="/{{ mode }}">
+    <label>Login <input name="username" required minlength="3" maxlength="32" autocomplete="username"></label>
+    <label>Hasło <input name="password" type="password" required {% if mode == "register" %}minlength="8"{% endif %}
+      autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}"></label>
+    <button>{{ "Załóż konto" if mode == "register" else "Zaloguj" }}</button>
+  </form>
+  {% if mode == "register" %}
+    <p>Masz już konto? <a href="/login">Zaloguj się</a></p>
+  {% else %}
+    <p>Nie masz konta? <a href="/register">Zarejestruj się</a></p>
+  {% endif %}
+</section>
+{% endblock %}

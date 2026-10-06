@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ league.name }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>{{ league.name }}</h1>
+  <p class="muted">Kod zaproszenia: <code>{{ league.invite_code }}</code></p>
+  <table class="table">
+    <thead><tr><th>#</th><th>Gracz</th><th>Pkt</th></tr></thead>
+    <tbody>
+    {% for name, total in table %}
+      <tr{% if name == user.username %} class="me"{% endif %}><td>{{ loop.index }}</td><td>{{ name }}</td><td>{{ total }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted">3 pkt za dokładny wynik, 1 pkt za trafionego zwycięzcę lub remis.</p>
+</section>
+
+<section class="card">
+  <h2>Do obstawienia</h2>
+  {% for match in upcoming %}
+    {% set p = mine.get(match.id) %}
+    <form class="match" method="post" action="/predictions/{{ match.id }}">
+      <span class="when">{{ match.competition }} · {{ match.kickoff | local }}</span>
+      <span class="team home">{{ match.home_team }}</span>
+      <input name="home" type="number" min="0" max="20" required value="{{ p.home_score if p else '' }}" aria-label="Gole: {{ match.home_team }}">
+      <span>:</span>
+      <input name="away" type="number" min="0" max="20" required value="{{ p.away_score if p else '' }}" aria-label="Gole: {{ match.away_team }}">
+      <span class="team">{{ match.away_team }}</span>
+      <input type="hidden" name="back" value="/leagues/{{ league.id }}">
+      <button>{{ "Zmień" if p else "Typuj" }}</button>
+    </form>
+  {% else %}
+    <p class="muted">Brak nadchodzących meczów.</p>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <h2>Rozegrane</h2>
+  {% for match in played %}
+    {% set p = mine.get(match.id) %}
+    <div class="match done">
+      <span class="when">{{ match.competition }} · {{ match.kickoff | local }}</span>
+      <span class="team home">{{ match.home_team }}</span>
+      <strong>{{ match.home_score }} : {{ match.away_score }}</strong>
+      <span class="team">{{ match.away_team }}</span>
+      {% if p %}
+        <span class="pick">typ {{ p.home_score }}:{{ p.away_score }} ·
+          <b>+{{ points((p.home_score, p.away_score), (match.home_score, match.away_score)) }}</b></span>
+      {% else %}<span class="pick muted">bez typu</span>{% endif %}
+    </div>
+  {% else %}
+    <p class="muted">Jeszcze nic nie rozegrano.</p>
+  {% endfor %}
+</section>
+{% endblock %}

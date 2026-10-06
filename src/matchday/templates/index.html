@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Twoje ligi{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Twoje ligi</h1>
+  {% if leagues %}
+    <ul class="leagues">{% for league in leagues %}<li><a href="/leagues/{{ league.id }}">{{ league.name }}</a></li>{% endfor %}</ul>
+  {% else %}
+    <p>Nie należysz jeszcze do żadnej ligi. Załóż własną albo dołącz kodem od znajomych.</p>
+  {% endif %}
+</section>
+<div class="grid">
+  <section class="card">
+    <h2>Nowa liga</h2>
+    <form method="post" action="/leagues">
+      <label>Nazwa <input name="name" required maxlength="64" placeholder="np. Ekipa z pracy"></label>
+      <button>Załóż ligę</button>
+    </form>
+  </section>
+  <section class="card">
+    <h2>Dołącz do ligi</h2>
+    <form method="post" action="/leagues/join">
+      <label>Kod zaproszenia <input name="code" required maxlength="16"></label>
+      <button>Dołącz</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

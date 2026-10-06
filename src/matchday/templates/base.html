@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Matchday{% endblock %} · Matchday</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+</head>
+<body>
+  <header>
+    <a class="brand" href="/">⚽ Matchday</a>
+    {% if user %}
+      <form method="post" action="/logout"><span>{{ user.username }}</span> <button class="link">Wyloguj</button></form>
+    {% endif %}
+  </header>
+  <main>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

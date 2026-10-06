@@ -1,0 +1,28 @@
+:root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #e6edf3; --muted: #8b949e; --accent: #3fb950; --error: #f85149; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+header form { display: flex; gap: 8px; align-items: center; color: var(--muted); }
+.brand { color: var(--text); font-weight: 700; text-decoration: none; }
+main { max-width: 760px; margin: 0 auto; padding: 16px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+.narrow { max-width: 380px; margin: 40px auto; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+h1, h2 { margin-top: 0; }
+a { color: #58a6ff; }
+label { display: block; margin-bottom: 12px; color: var(--muted); }
+input { display: block; width: 100%; margin-top: 4px; padding: 8px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font: inherit; }
+button { padding: 8px 14px; background: var(--accent); color: #0d1117; border: 0; border-radius: 6px; font: inherit; font-weight: 600; cursor: pointer; }
+button.link { background: none; color: #58a6ff; padding: 0; font-weight: 400; }
+.error { color: var(--error); border: 1px solid var(--error); border-radius: 6px; padding: 8px 12px; }
+.muted { color: var(--muted); }
+.table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+.table th, .table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.table tr.me td { color: var(--accent); font-weight: 600; }
+.match { display: grid; grid-template-columns: 1fr 52px auto 52px 1fr auto; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.match .when { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+.match input { width: 52px; margin: 0; text-align: center; }
+.match .home { text-align: right; }
+.match.done { grid-template-columns: 1fr auto 1fr; }
+.match.done .pick { grid-column: 1 / -1; text-align: center; font-size: 14px; }
+@media (max-width: 480px) { .match { grid-template-columns: 1fr 44px auto 44px 1fr; } .match button { grid-column: 1 / -1; } .match input { width: 44px; } }
